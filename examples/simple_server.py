@@ -2,8 +2,11 @@
 """
 An example runnable gRPC server that defines a specific set of tools.
 """
+import os
+import sys
 import requests
-from ModuleContextStreaming.server import serve
+from dotenv import load_dotenv
+from ModuleContextStreaming.server import Server
 
 def tool_file_reader(arguments):
     """
@@ -115,6 +118,12 @@ def tool_render_html(arguments):
 
 
 if __name__ == '__main__':
+    # For this example, we load config from a .env file.
+    # In a real application, this could come from any config source.
+    load_dotenv()
+    print("Starting example server...")
+
+    # A registry mapping tool names to the functions that implement them.
     TOOL_REGISTRY = {
         "file_reader": tool_file_reader,
         "web_search": tool_web_search,
@@ -122,5 +131,27 @@ if __name__ == '__main__':
         "render_html": tool_render_html,
     }
 
-    print("Starting example server...")
-    serve(tool_registry=TOOL_REGISTRY)
+    # Load required settings from environment variables.
+    try:
+        server_port = int(os.environ['MCS_PORT'])
+        kc_url = os.environ['KEYCLOAK_URL']
+        kc_realm = os.environ['KEYCLOAK_REALM']
+        kc_audience = os.environ['KEYCLOAK_AUDIENCE']
+    except KeyError as e:
+        print(f"❌ Error: Missing required environment variable: {e}", file=sys.stderr)
+        print("Please ensure MCS_PORT, KEYCLOAK_URL, KEYCLOAK_REALM, and KEYCLOAK_AUDIENCE are in your .env file.", file=sys.stderr)
+        sys.exit(1)
+
+    # 1. Instantiate the Server class with the tools and configuration.
+    server_instance = Server(
+        tool_registry=TOOL_REGISTRY,
+        port=server_port,
+        keycloak_url=kc_url,
+        keycloak_realm=kc_realm,
+        keycloak_audience=kc_audience,
+        key_path='certs/private.key',
+        cert_path='certs/certificate.pem'
+    )
+
+    # 2. Run the server.
+    server_instance.run()

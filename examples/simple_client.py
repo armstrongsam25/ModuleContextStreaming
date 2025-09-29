@@ -1,54 +1,71 @@
 # In examples/simple_client.py
 """
-An example runnable gRPC client that imports and uses the core client library.
+An example runnable gRPC client that uses the ModuleContextStreaming library.
 """
-from ModuleContextStreaming.client import setup_client, call_tool
-from ModuleContextStreaming import mcs_pb2
+import os
+import sys
+import uuid
+from dotenv import load_dotenv
+from ModuleContextStreaming.client import Client
 
 
 def main():
-    """Sets up the client and runs a sequence of example tool calls."""
-    stub, auth_metadata, channel = setup_client()
+	"""Sets up the client and runs a sequence of example tool calls."""
+	load_dotenv()
+	client = None  # Initialize client to None
 
-    if not stub:
-        print("Client setup failed. Exiting.")
-        return
+	try:
+		# Load all configuration from environment variables
+		server_address = f"{os.environ['MCS_SERVER_ADDRESS']}:{os.environ['MCS_PORT']}"
+		kc_url = os.environ['KEYCLOAK_URL']
+		kc_realm = os.environ['KEYCLOAK_REALM']
+		kc_client_id = os.environ['KEYCLOAK_CLIENT_ID']
+		kc_client_secret = os.environ['KEYCLOAK_CLIENT_SECRET']
+		kc_audience = os.environ['KEYCLOAK_AUDIENCE']
 
-    # Use a try/finally block to ensure the channel is closed
-    try:
-        print("\n----- Listing Available Tools -----")
-        try:
-            list_tools_request = mcs_pb2.ListToolsRequest()
-            list_tools_response = stub.ListTools(list_tools_request, metadata=auth_metadata)
-            print("✅ Tools available from server:")
-            for tool in list_tools_response.tools:
-                print(f"  - {tool.name}: {tool.description}")
-        except Exception as e:
-            print(f"❌ Error listing tools: {e}")
+		# 1. Instantiate the Client, which handles connection and auth.
+		client = Client(
+			server_address=server_address,
+			cert_path='certs/certificate.pem',
+			keycloak_url=kc_url,
+			keycloak_realm=kc_realm,
+			keycloak_client_id=kc_client_id,
+			keycloak_client_secret=kc_client_secret,
+			keycloak_audience=kc_audience
+		)
 
-        example_calls = [
-            {
-                "tool_name": "render_html",
-                "args": {"html_string": "<h1>Hello again!</h1>"}
-            },
-            {
-                "tool_name": "web_search",
-                "args": {"query": "gRPC Python Interceptors"}
-            },
-            {
-                "tool_name": "image_fetcher",
-                "args": {"url": "https://www.python.org/static/community_logos/python-logo-master-v3-TM.png"}
-            }
-        ]
+		# 2. Use the client's methods to interact with the server.
+		tools = client.list_tools()
+		for tool in tools:
+			print(f"  - {tool.name}: {tool.description}")
 
-        for call in example_calls:
-            call_tool(stub, auth_metadata, call['tool_name'], call['args'])
+		# --- Example Tool Calls ---
 
-    finally:
-        if channel:
-            channel.close()
-            print("\nConnection closed.")
+		# Example 1: Web Search
+		search_query = "gRPC Python Interceptors"
+		for chunk in client.call_tool("web_search", {"query": search_query}):
+			if chunk.WhichOneof('content_block') == 'text':
+				print(f"  [Search Result] {chunk.text.text.strip()}")
+
+		# Example 2: Image Fetcher
+		image_url = "https://www.python.org/static/community_logos/python-logo-master-v3-TM.png"
+		output_filename = f"{uuid.uuid4()}.png"
+		for chunk in client.call_tool("image_fetcher", {"url": image_url}):
+			if chunk.WhichOneof('content_block') == 'image':
+				with open(output_filename, 'wb') as f:
+					f.write(chunk.image.data)
+				print(f"  [Image] Saved {len(chunk.image.data)} bytes to {output_filename}")
+
+
+	except KeyError as e:
+		print(f"❌ Error: Missing required environment variable in .env file: {e}", file=sys.stderr)
+	except Exception as e:
+		print(f"❌ An application error occurred: {e}", file=sys.stderr)
+	finally:
+		# 3. Ensure the connection is closed.
+		if client:
+			client.close()
 
 
 if __name__ == '__main__':
-    main()
+	main()
