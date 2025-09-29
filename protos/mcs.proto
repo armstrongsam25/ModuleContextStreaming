@@ -1,0 +1,65 @@
+// In protos/mcs.proto
+
+syntax = "proto3";
+
+// The package name helps prevent naming conflicts.
+package ModuleContextStreaming;
+
+// The service definition: This is the collection of RPC methods your server will provide.
+service ModuleContext {
+  // A simple unary call for the initial handshake and capability negotiation.
+  rpc Initialize(InitializeRequest) returns (InitializeResult) {}
+
+  // A unary call to discover what tools the server has available.
+  rpc ListTools(ListToolsRequest) returns (ListToolsResult) {}
+
+  // The core server-streaming method. The client sends one request, and the server
+  // streams back a sequence of chunks. This is perfect for streaming text or data.
+  rpc StreamToolCall(ToolCallRequest) returns (stream ToolCallChunk) {}
+}
+
+// ============== Message Definitions ==============
+
+message ClientInfo {
+  string name = 1;
+  string version = 2;
+}
+
+message InitializeRequest {
+  ClientInfo client_info = 1;
+}
+
+message InitializeResult {
+  string server_version = 1;
+  string welcome_message = 2;
+}
+
+// --- Tool Discovery Messages ---
+message ListToolsRequest {
+  // Can be empty for now, or could include filters later.
+}
+
+message ToolDefinition {
+    string name = 1;
+    string description = 2;
+}
+
+message ListToolsResult {
+    repeated ToolDefinition tools = 1;
+}
+
+
+// --- Tool Streaming Messages ---
+message ToolCallRequest {
+  string tool_name = 1;
+  // A flexible key-value map for tool arguments.
+  map<string, string> arguments = 2;
+}
+
+// The message that gets streamed back to the client for each chunk of data.
+message ToolCallChunk {
+  // A chunk of text or a base64 encoded binary payload.
+  string content_chunk = 1;
+  // A sequence number to ensure correct ordering on the client side.
+  int32 sequence_id = 2;
+}

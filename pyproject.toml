@@ -1,0 +1,47 @@
+# In pyproject.toml
+
+[build-system]
+requires = ["setuptools>=80.9"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ModuleContextStreaming"
+version = "0.0.1"
+authors = [
+  { name="Sam Armstrong", email="example@example.com" },
+]
+description = "A gRPC service for providing real-time, streamable context to LLMs."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# Core dependencies required for the project to run.
+dependencies = [
+    "grpcio~=1.75.1",
+    "protobuf~=6.32.1",
+    "python-jose[cryptography]~=3.5.0",
+    "requests~=2.32.5",
+]
+
+[project.optional-dependencies]
+# Dependencies for development, testing, and code generation.
+dev = [
+    "grpcio-tools~=1.75.1",
+    "pytest~=8.4.2",
+    "ruff~=0.13.2",
+    "python-dotenv~=1.1.1",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/armstrongsam25/ModuleContextStreaming"
+"Bug Tracker" = "https://github.com/armstrongsam25/ModuleContextStreaming/issues"
+
+[tool.setuptools]
+packages = ["ModuleContextStreaming"]
