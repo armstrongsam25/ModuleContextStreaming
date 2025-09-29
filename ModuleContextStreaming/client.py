@@ -1,23 +1,20 @@
 # In ModuleContextStreaming/client.py
 """
-A secure, authenticated gRPC client for the ModuleContextStreaming service.
+Provides the core scaffolding for creating a secure, authenticated gRPC client.
 
-This script handles authenticating with a Keycloak server to obtain a JWT,
-then uses that token to make secure gRPC calls over a TLS-encrypted channel.
-It demonstrates calling various tools available on the server, including
-unary and streaming RPCs, and handles different types of streamed content
-like text, HTML, and binary image data.
+This module offers functions to set up a connection and to call individual tools,
+but does not contain a runnable main script itself.
 """
 import argparse
 import os
+import uuid
 
 import grpc
 import requests
 from dotenv import load_dotenv
 from google.protobuf.json_format import ParseDict
 
-from . import mcs_pb2
-from . import mcs_pb2_grpc
+from . import mcs_pb2, mcs_pb2_grpc
 
 
 def get_keycloak_token(url, realm, client_id, client_secret, audience=None):
@@ -52,22 +49,15 @@ def get_keycloak_token(url, realm, client_id, client_secret, audience=None):
         print(f"❌ Could not get token from Keycloak: {e}")
         return None
 
-
-def run():
+def setup_client():
     """
-    The main entry point for the gRPC client.
+    Handles all client setup, including auth and creating a secure channel.
 
-    This function performs the following steps:
-    1. Loads configuration from environment variables and command-line arguments.
-    2. Authenticates with Keycloak to get a JWT access token.
-    3. Establishes a secure, TLS-encrypted gRPC channel to the server.
-    4. Creates a client stub.
-    5. Calls the `ListTools` RPC to see available tools.
-    6. Calls several `CallTool` RPCs to demonstrate handling different
-       tools and response types (text, images, client-to-server HTML).
+    Returns:
+        tuple: A tuple containing the gRPC client stub and authentication metadata,
+               or (None, None) if setup fails.
     """
     load_dotenv()
-
     parser = argparse.ArgumentParser(description="Run the MCS gRPC client.")
     parser.add_argument('--server-address', default=os.getenv('MCS_SERVER_ADDRESS', 'localhost:50051'))
     parser.add_argument('--keycloak-url', default=os.getenv('KEYCLOAK_URL'))
@@ -80,8 +70,8 @@ def run():
     if not all(
             [args.keycloak_url, args.keycloak_realm, args.keycloak_client_id, args.keycloak_audience,
              args.keycloak_client_secret]):
-        print("❌ Error: Keycloak settings must be provided via .env, env vars, or args.")
-        return
+        print("❌ Error: Keycloak settings must be provided.")
+        return None, None
 
     print("🚀 Starting MCS Client...")
     print("🔑 Authenticating with Keycloak...")
@@ -92,9 +82,8 @@ def run():
         args.keycloak_client_secret,
         audience=args.keycloak_audience
     )
-
     if not jwt_token:
-        return
+        return None, None
 
     print("✅ Successfully authenticated.")
     auth_metadata = [('authorization', f'Bearer {jwt_token}')]
@@ -104,91 +93,42 @@ def run():
             trusted_certs = f.read()
     except FileNotFoundError:
         print("❌ Error: Certificate file not found at 'certs/certificate.pem'.")
-        print("Please run the certificate generation script first.")
-        return
+        return None, None
 
     credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
+    channel = grpc.secure_channel(args.server_address, credentials)
+    stub = mcs_pb2_grpc.ModuleContextStub(channel)
 
-    with grpc.secure_channel(args.server_address, credentials) as channel:
-        stub = mcs_pb2_grpc.ModuleContextStub(channel)
-
-        print("\n----- Calling ListTools -----")
-        try:
-            list_tools_request = mcs_pb2.ListToolsRequest()
-            list_tools_response = stub.ListTools(list_tools_request, metadata=auth_metadata)
-            print("✅ Available tools from server:")
-            for tool in list_tools_response.tools:
-                print(f"  - {tool.name}: {tool.description}")
-        except grpc.RpcError as e:
-            print(f"❌ A gRPC error occurred in ListTools: {e.code().name} ({e.details()})")
-
-        print("\n----- Calling Tool: render_html -----")
-        try:
-            tool_name_to_call = "render_html"
-            sample_html = """
-            <!DOCTYPE html>
-            <html>
-            <head><title>Hello from Client</title></head>
-            <body>
-                <h1>This is a test</h1>
-                <p>Sending this HTML to the server.</p>
-            </body>
-            </html>
-            """
-            arguments_dict = {"html_string": sample_html}
-            arguments_struct = mcs_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
-            ParseDict(arguments_dict, arguments_struct)
-            stream_request = mcs_pb2.ToolCallRequest(tool_name=tool_name_to_call, arguments=arguments_struct)
-
-            print("✅ Sending HTML snippet to the server...")
-            for chunk in stub.CallTool(stream_request, metadata=auth_metadata):
-                content_type = chunk.WhichOneof('content_block')
-                if content_type == 'text':
-                    print(f"  [Server Response] {chunk.text.text.strip()}")
-            print("✅ Finished sending HTML.")
-        except grpc.RpcError as e:
-            print(f"❌ Error during CallTool (render_html): {e.code().name}: {e.details()}")
-
-        print("\n----- Calling Tool: web_search -----")
-        try:
-            tool_name_to_call = "web_search"
-            arguments_dict = {"query": "What is gRPC?"}
-            arguments_struct = mcs_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
-            ParseDict(arguments_dict, arguments_struct)
-            stream_request = mcs_pb2.ToolCallRequest(tool_name=tool_name_to_call, arguments=arguments_struct)
-
-            print(f"✅ Streaming response for query '{arguments_dict['query']}':")
-            for chunk in stub.CallTool(stream_request, metadata=auth_metadata):
-                content_type = chunk.WhichOneof('content_block')
-                if content_type == 'text':
-                    print(f"  {chunk.text.text.strip()}")
-            print("✅ Stream finished.")
-        except grpc.RpcError as e:
-            print(f"❌ Error during CallTool (web_search): {e.code().name}: {e.details()}")
-
-        print("\n----- Calling Tool: image_fetcher -----")
-        try:
-            tool_name_to_call = "image_fetcher"
-            image_url = "https://www.grpc.io/img/logos/grpc-icon-color.png"
-            arguments_dict = {"url": image_url}
-            arguments_struct = mcs_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
-            ParseDict(arguments_dict, arguments_struct)
-            stream_request = mcs_pb2.ToolCallRequest(tool_name=tool_name_to_call, arguments=arguments_struct)
-            output_filename = "downloaded_image.png"
-
-            print(f"✅ Fetching image from '{image_url}' and saving to '{output_filename}':")
-            for chunk in stub.CallTool(stream_request, metadata=auth_metadata):
-                content_type = chunk.WhichOneof('content_block')
-                if content_type == 'image':
-                    with open(output_filename, 'wb') as f:
-                        f.write(chunk.image.data)
-                    print(f"  [Image] Saved {len(chunk.image.data)} bytes to {output_filename}")
-                elif content_type == 'text':
-                    print(f"  [Error] {chunk.text.text.strip()}")
-            print("✅ Image fetch finished.")
-        except grpc.RpcError as e:
-            print(f"❌ Error during CallTool (image_fetcher): {e.code().name}: {e.details()}")
+    return stub, auth_metadata, channel
 
 
-if __name__ == '__main__':
-    run()
+def call_tool(stub, auth_metadata, tool_name, arguments_dict):
+    """
+    Performs a single tool call and handles printing the streamed response.
+
+    Args:
+        stub: The active gRPC client stub.
+        auth_metadata (list): The authentication metadata for the call.
+        tool_name (str): The name of the tool to execute.
+        arguments_dict (dict): A dictionary of arguments for the tool.
+    """
+    try:
+        print(f"\n----- Calling Tool: {tool_name} -----")
+        print(f"✅ Arguments: {arguments_dict}")
+
+        arguments_struct = mcs_pb2.google_dot_protobuf_dot_struct__pb2.Struct()
+        ParseDict(arguments_dict, arguments_struct)
+        stream_request = mcs_pb2.ToolCallRequest(tool_name=tool_name, arguments=arguments_struct)
+        output_filename = f"{uuid.uuid4()}.png"
+
+        for chunk in stub.CallTool(stream_request, metadata=auth_metadata):
+            content_type = chunk.WhichOneof('content_block')
+            if content_type == 'text':
+                print(f"  [Server Response] {chunk.text.text.strip()}")
+            elif content_type == 'image':
+                with open(output_filename, 'wb') as f:
+                    f.write(chunk.image.data)
+                print(f"  [Image] Saved {len(chunk.image.data)} bytes to {output_filename}")
+        print("✅ Stream finished.")
+    except grpc.RpcError as e:
+        print(f"❌ Error during CallTool ({tool_name}): {e.code().name}: {e.details()}")
