@@ -53,7 +53,7 @@ class ModuleContextServicer(mcs_pb2_grpc.ModuleContextServicer):
 
 class Server:
     """A configurable gRPC server for the ModuleContextStreaming service."""
-    def __init__(self, tool_registry, port, keycloak_url, keycloak_realm, keycloak_audience, key_path, cert_path):
+    def __init__(self, tool_registry, port, keycloak_url, keycloak_realm, keycloak_audience, key_path=None, cert_path=None):
         """
         Initializes the Server with all necessary configuration.
 
@@ -79,26 +79,27 @@ class Server:
         try:
             authenticator = KeycloakAuthenticator(self.keycloak_url, self.keycloak_realm, self.keycloak_audience)
             auth_interceptor = AuthInterceptor(authenticator)
-
-            with open(self.key_path, 'rb') as f:
-                private_key = f.read()
-            with open(self.cert_path, 'rb') as f:
-                certificate_chain = f.read()
-
-            server_credentials = grpc.ssl_server_credentials(((private_key, certificate_chain),))
-            server = grpc.server(
-                futures.ThreadPoolExecutor(max_workers=10),
-                interceptors=(auth_interceptor,)
-            )
-
+            server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), interceptors=(auth_interceptor,))
             servicer_instance = ModuleContextServicer(self.tool_registry)
             mcs_pb2_grpc.add_ModuleContextServicer_to_server(servicer_instance, server)
 
-            server.add_secure_port(f'[::]:{self.port}', server_credentials)
-            print(f"✅ Secure server started, listening on port {self.port}.")
+            if self.key_path and self.cert_path:
+                # Secure Mode
+                with open(self.key_path, 'rb') as f:
+                    private_key = f.read()
+                with open(self.cert_path, 'rb') as f:
+                    certificate_chain = f.read()
+                server_credentials = grpc.ssl_server_credentials(((private_key, certificate_chain),))
+                server.add_secure_port(f'[::]:{self.port}', server_credentials)
+                print(f"✅ Secure server started, listening on port {self.port}.")
+            else:
+                # Insecure Mode
+                server.add_insecure_port(f'[::]:{self.port}')
+                print("⚠️ WARNING: Server is running in INSECURE mode. Do not use in production.")
+                print(f"✅ Insecure server started, listening on port {self.port}.")
+
             server.start()
             server.wait_for_termination()
-
         except FileNotFoundError as e:
             print(f"❌ Error: Certificate file not found: {e.filename}", file=sys.stderr)
         except Exception as e:

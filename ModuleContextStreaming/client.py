@@ -14,18 +14,20 @@ from . import mcs_pb2, mcs_pb2_grpc
 class Client:
     """A gRPC client for the ModuleContextStreaming service."""
 
-    def __init__(self, server_address, cert_path, keycloak_url, keycloak_realm, keycloak_client_id, keycloak_client_secret, keycloak_audience):
+    def __init__(self, server_address, keycloak_url, keycloak_realm, keycloak_client_id, keycloak_client_secret,
+                 keycloak_audience, cert_path=None):
         """
         Initializes and connects the client.
 
         Args:
             server_address (str): The address of the gRPC server (e.g., 'localhost:50051').
-            cert_path (str): Path to the server's public certificate file for TLS.
             keycloak_url (str): The base URL of the Keycloak server.
             keycloak_realm (str): The Keycloak realm.
             keycloak_client_id (str): The client ID for authentication.
             keycloak_client_secret (str): The client secret for authentication.
             keycloak_audience (str): The audience for the token.
+            cert_path (str, optional): Path to a specific server certificate file for TLS.
+                                       If None (default), the system's default trust store is used for production.
         """
         self.server_address = server_address
         self.auth_metadata = None
@@ -34,20 +36,28 @@ class Client:
 
         print("🚀 Initializing MCS Client...")
         print("🔑 Authenticating with Keycloak...")
-        jwt_token = self._get_keycloak_token(keycloak_url, keycloak_realm, keycloak_client_id, keycloak_client_secret, keycloak_audience)
+        jwt_token = self._get_keycloak_token(keycloak_url, keycloak_realm, keycloak_client_id, keycloak_client_secret,
+                                             keycloak_audience)
         if not jwt_token:
             raise ConnectionError("Failed to authenticate with Keycloak.")
         print("✅ Successfully authenticated.")
         self.auth_metadata = [('authorization', f'Bearer {jwt_token}')]
 
-        try:
-            with open(cert_path, 'rb') as f:
-                trusted_certs = f.read()
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Certificate file not found at '{cert_path}'.")
+        if cert_path:
+            # Secure Mode
+            print(f" HINT: Using custom certificate for secure connection: {cert_path}")
+            try:
+                with open(cert_path, 'rb') as f:
+                    trusted_certs = f.read()
+                credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
+                self.channel = grpc.secure_channel(self.server_address, credentials)
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Certificate file not found at '{cert_path}'.")
+        else:
+            # Insecure Mode
+            print("⚠️ WARNING: Client connecting via an INSECURE channel. Do not use in production.")
+            self.channel = grpc.insecure_channel(self.server_address)
 
-        credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
-        self.channel = grpc.secure_channel(self.server_address, credentials)
         self.stub = mcs_pb2_grpc.ModuleContextStub(self.channel)
 
     def _get_keycloak_token(self, url, realm, client_id, client_secret, audience):
