@@ -1,13 +1,13 @@
-# In build.py
+# In build_scripts.py
 
 import subprocess
 import os
 import sys
 
 # --- Configuration ---
-PROTO_DIR = "protos"
+PROTO_DIR = "../protos"
 PROTO_FILE = os.path.join(PROTO_DIR, "mcs.proto")
-OUTPUT_DIR = "ModuleContextStreaming"
+OUTPUT_DIR = "../ModuleContextStreaming"
 GENERATED_GRPC_FILE = os.path.join(OUTPUT_DIR, "mcs_pb2_grpc.py")
 
 

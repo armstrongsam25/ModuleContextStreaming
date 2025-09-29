@@ -90,7 +90,7 @@ Follow these steps to set up your local development environment.
     This is the final setup step. Run the `build.py` script to compile the `.proto` file and automatically apply the necessary import patch.
 
     ```bash
-    python build.py
+    python build_scripts.py
     ```
 
     You only need to re-run this command when you make changes to the `protos/mcs.proto` file.

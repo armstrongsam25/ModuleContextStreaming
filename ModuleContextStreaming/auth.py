@@ -59,49 +59,43 @@ def _get_token_from_metadata(metadata):
 
 
 class AuthInterceptor(grpc.ServerInterceptor):
-    def __init__(self, authenticator: KeycloakAuthenticator):
-        self._authenticator = authenticator
+	def __init__(self, authenticator: KeycloakAuthenticator):
+		self._authenticator = authenticator
 
-    def intercept_service(self, continuation, handler_call_details):
-        # --- MASTER DEBUG BLOCK ---
-        # This will catch any error happening inside the interceptor
-        try:
-            method_name = handler_call_details.method.split('/')[-1]
-            if method_name == 'Initialize':
-                return continuation(handler_call_details)
+	def intercept_service(self, continuation, handler_call_details):
+		# --- MASTER DEBUG BLOCK ---
+		# This will catch any error happening inside the interceptor
+		try:
+			method_name = handler_call_details.method.split('/')[-1]
+			if method_name == 'Initialize':
+				return continuation(handler_call_details)
 
-            handler = continuation(handler_call_details)
-            is_streaming = handler.response_streaming
+			handler = continuation(handler_call_details)
+			is_streaming = handler.response_streaming
 
-            def _abort(status_code, details):
-                def abort_handler(request, context):
-                    context.abort(status_code, details)
-                if is_streaming:
-                    return grpc.unary_stream_rpc_method_handler(abort_handler)
-                else:
-                    return grpc.unary_unary_rpc_method_handler(abort_handler)
+			def _abort(status_code, details):
+				def abort_handler(request, context):
+					context.abort(status_code, details)
+				if is_streaming:
+					return grpc.unary_stream_rpc_method_handler(abort_handler)
+				else:
+					return grpc.unary_unary_rpc_method_handler(abort_handler)
 
-            token = _get_token_from_metadata(handler_call_details.invocation_metadata)
-            if not token:
-                print("❌ Interceptor: Request rejected: Missing token.")
-                return _abort(grpc.StatusCode.UNAUTHENTICATED, "Authorization token is missing.")
+			token = _get_token_from_metadata(handler_call_details.invocation_metadata)
+			if not token:
+				print("❌ Interceptor: Request rejected: Missing token.")
+				return _abort(grpc.StatusCode.UNAUTHENTICATED, "Authorization token is missing.")
 
-            try:
-                claims = self._authenticator.validate_token(token)
-                return handler
-            except exceptions.AuthenticationFailed as e:
-                print(f"❌ Interceptor: Request rejected: Invalid token. Reason: {e}")
-                return _abort(grpc.StatusCode.UNAUTHENTICATED, "Token is invalid.")
+			try:
+				claims = self._authenticator.validate_token(token)
+				# TODO: Add claims to a custom context object that your service method can access.
+				# This allows the RPC method itself to make authorization decisions.
+				return handler
+			except exceptions.AuthenticationFailed as e:
+				print(f"❌ Interceptor: Request rejected: Invalid token. Reason: {e}")
+				return _abort(grpc.StatusCode.UNAUTHENTICATED, "Token is invalid.")
 
-        except Exception as e:
-            # If the server is crashing silently, THIS block should catch it.
-            import traceback
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print("!!! FATAL ERROR CAUGHT IN INTERCEPTOR !!!")
-            print(f"!!! Exception Type: {type(e).__name__}")
-            print(f"!!! Exception Details: {e}")
-            print(traceback.format_exc())
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            # Abort the call so the client doesn't hang
-            context = grpc.ServicerContext()
-            context.abort(grpc.StatusCode.INTERNAL, "Fatal error occurred in authentication layer.")
+		except Exception as e:
+			# Abort the call so the client doesn't hang
+			context = grpc.ServicerContext()
+			context.abort(grpc.StatusCode.INTERNAL, "Fatal error occurred in authentication layer.")

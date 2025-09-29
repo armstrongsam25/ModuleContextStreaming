@@ -26,7 +26,7 @@ if _version_not_supported:
 
 
 class ModuleContextStub(object):
-    """The service definition: This is the collection of RPC methods your server will provide.
+    """Service definition remains the same
     """
 
     def __init__(self, channel):
@@ -35,45 +35,30 @@ class ModuleContextStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.Initialize = channel.unary_unary(
-                '/ModuleContextStreaming.ModuleContext/Initialize',
-                request_serializer=mcs__pb2.InitializeRequest.SerializeToString,
-                response_deserializer=mcs__pb2.InitializeResult.FromString,
-                _registered_method=True)
         self.ListTools = channel.unary_unary(
-                '/ModuleContextStreaming.ModuleContext/ListTools',
+                '/module_context.ModuleContext/ListTools',
                 request_serializer=mcs__pb2.ListToolsRequest.SerializeToString,
                 response_deserializer=mcs__pb2.ListToolsResult.FromString,
                 _registered_method=True)
-        self.StreamToolCall = channel.unary_stream(
-                '/ModuleContextStreaming.ModuleContext/StreamToolCall',
+        self.CallTool = channel.unary_stream(
+                '/module_context.ModuleContext/CallTool',
                 request_serializer=mcs__pb2.ToolCallRequest.SerializeToString,
                 response_deserializer=mcs__pb2.ToolCallChunk.FromString,
                 _registered_method=True)
 
 
 class ModuleContextServicer(object):
-    """The service definition: This is the collection of RPC methods your server will provide.
+    """Service definition remains the same
     """
 
-    def Initialize(self, request, context):
-        """A simple unary call for the initial handshake and capability negotiation.
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def ListTools(self, request, context):
-        """A unary call to discover what tools the server has available.
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def StreamToolCall(self, request, context):
-        """The core server-streaming method. The client sends one request, and the server
-        streams back a sequence of chunks. This is perfect for streaming text or data.
-        """
+    def CallTool(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -81,59 +66,27 @@ class ModuleContextServicer(object):
 
 def add_ModuleContextServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Initialize': grpc.unary_unary_rpc_method_handler(
-                    servicer.Initialize,
-                    request_deserializer=mcs__pb2.InitializeRequest.FromString,
-                    response_serializer=mcs__pb2.InitializeResult.SerializeToString,
-            ),
             'ListTools': grpc.unary_unary_rpc_method_handler(
                     servicer.ListTools,
                     request_deserializer=mcs__pb2.ListToolsRequest.FromString,
                     response_serializer=mcs__pb2.ListToolsResult.SerializeToString,
             ),
-            'StreamToolCall': grpc.unary_stream_rpc_method_handler(
-                    servicer.StreamToolCall,
+            'CallTool': grpc.unary_stream_rpc_method_handler(
+                    servicer.CallTool,
                     request_deserializer=mcs__pb2.ToolCallRequest.FromString,
                     response_serializer=mcs__pb2.ToolCallChunk.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'ModuleContextStreaming.ModuleContext', rpc_method_handlers)
+            'module_context.ModuleContext', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('ModuleContextStreaming.ModuleContext', rpc_method_handlers)
+    server.add_registered_method_handlers('module_context.ModuleContext', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
 class ModuleContext(object):
-    """The service definition: This is the collection of RPC methods your server will provide.
+    """Service definition remains the same
     """
-
-    @staticmethod
-    def Initialize(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/ModuleContextStreaming.ModuleContext/Initialize',
-            mcs__pb2.InitializeRequest.SerializeToString,
-            mcs__pb2.InitializeResult.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
 
     @staticmethod
     def ListTools(request,
@@ -149,7 +102,7 @@ class ModuleContext(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/ModuleContextStreaming.ModuleContext/ListTools',
+            '/module_context.ModuleContext/ListTools',
             mcs__pb2.ListToolsRequest.SerializeToString,
             mcs__pb2.ListToolsResult.FromString,
             options,
@@ -163,7 +116,7 @@ class ModuleContext(object):
             _registered_method=True)
 
     @staticmethod
-    def StreamToolCall(request,
+    def CallTool(request,
             target,
             options=(),
             channel_credentials=None,
@@ -176,7 +129,7 @@ class ModuleContext(object):
         return grpc.experimental.unary_stream(
             request,
             target,
-            '/ModuleContextStreaming.ModuleContext/StreamToolCall',
+            '/module_context.ModuleContext/CallTool',
             mcs__pb2.ToolCallRequest.SerializeToString,
             mcs__pb2.ToolCallChunk.FromString,
             options,
