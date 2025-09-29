@@ -7,6 +7,7 @@ import sys
 import requests
 from dotenv import load_dotenv
 from ModuleContextStreaming.server import Server
+from ddgs import DDGS
 
 def tool_file_reader(arguments):
     """
@@ -29,10 +30,9 @@ def tool_file_reader(arguments):
     except UnicodeDecodeError:
         yield f"ERROR: The file at '{file_path}' is not valid UTF-8 text."
 
-
 def tool_web_search(arguments):
     """
-    Performs a web search using the DuckDuckGo API and streams the results.
+    Performs a web search using the DuckDuckGo Search Python SDK.
 
     Args:
         arguments (dict): A dictionary containing tool parameters.
@@ -48,25 +48,21 @@ def tool_web_search(arguments):
 
     yield f"Searching the web for: '{query}'..."
     try:
-        # Use the DuckDuckGo Instant Answer API (no key required)
-        url = f"https://api.duckduckgo.com/?q={query}&format=json"
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
+        # Use the more general and robust `search` method.
+        # We convert the generator to a list to check if it's empty.
+        results = list(DDGS().text("python programming", max_results=5))
 
-        if data.get("AbstractText"):
-            yield f"\nInstant Answer: {data['AbstractText']}"
-
-        if data.get("RelatedTopics"):
-            yield "\nRelated Topics:"
-            for topic in data["RelatedTopics"]:
-                if "Text" in topic and "FirstURL" in topic:
-                    yield f"- {topic['Text']}: {topic['FirstURL']}"
+        if results:
+            yield "\nTop Search Results:"
+            for result in results:
+                title = result.get('title')
+                href = result.get('href')
+                if title and href:
+                    yield f"- {title}: {href}"
         else:
-            yield "No direct results found."
-
-    except requests.RequestException as e:
-        yield f"ERROR: Failed to perform web search. {e}"
+            yield "No results found."
+    except Exception as e:
+        yield f"ERROR: An unexpected exception occurred during the web search: {e}"
 
 
 def tool_image_fetcher(arguments):

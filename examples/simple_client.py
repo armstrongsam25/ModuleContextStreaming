@@ -42,7 +42,7 @@ def main():
 		# --- Example Tool Calls ---
 
 		# Example 1: Web Search
-		search_query = "gRPC Python Interceptors"
+		search_query = "gRPC Python"
 		for chunk in client.call_tool("web_search", {"query": search_query}):
 			if chunk.WhichOneof('content_block') == 'text':
 				print(f"  [Search Result] {chunk.text.text.strip()}")
@@ -55,6 +55,18 @@ def main():
 				with open(output_filename, 'wb') as f:
 					f.write(chunk.image.data)
 				print(f"  [Image] Saved {len(chunk.image.data)} bytes to {output_filename}")
+
+		# Example 3: Render HTML
+		html_content = "<h1>Hello, World!</h1>"
+		for chunk in client.call_tool("render_html", {"html_string": html_content}):
+			if chunk.WhichOneof('content_block') == 'text':
+				print(f"  [Rendered HTML] {chunk.text.text.strip()}")
+
+		# Example 4: File Reader
+		file_path = "LICENSE.md"
+		for chunk in client.call_tool("file_reader", {"path": file_path}):
+			if chunk.WhichOneof('content_block') == 'text':
+				print(f"  [File Content] {chunk.text.text.strip()}")
 
 
 	except KeyError as e:
