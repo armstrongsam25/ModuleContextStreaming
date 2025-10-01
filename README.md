@@ -2,8 +2,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/ModuleContextStreaming/"><img alt="PyPI" src="https://img.shields.io/pypi/v/ModuleContextStreaming?color=blue"></a>
-  <a href="#"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/armstrongsam25/ModuleContextStreaming/ci.yml?branch=main"></a>
-  <a href="#"><img alt="Code Quality" src="https://img.shields.io/badge/code%20style-ruff-black"></a>
+  <a href="https://github.com/armstrongsam25/ModuleContextStreaming/actions/workflows/pytest.yml"><img alt="Pytest" src="https://img.shields.io/github/actions/workflow/status/armstrongsam25/ModuleContextStreaming/pytest.yml?branch=main"></a>
   <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
   <a href="#"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/ModuleContextStreaming"></a>
 </p>

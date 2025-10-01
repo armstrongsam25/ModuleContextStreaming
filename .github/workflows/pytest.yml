@@ -1,0 +1,41 @@
+# .github/workflows/pytest.yml
+
+name: Pytest
+
+# This workflow runs on any push or pull_request to the main branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    # Run on the latest version of Ubuntu
+    runs-on: ubuntu-latest
+    strategy:
+      # Run tests on multiple Python versions to ensure compatibility
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      # 1. Checks out your repository's code
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      # 2. Sets up the specified version of Python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # 3. Installs your project and its development dependencies (including pytest)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      # 4. Runs pytest
+      - name: Run tests with pytest
+        run: |
+          pytest
