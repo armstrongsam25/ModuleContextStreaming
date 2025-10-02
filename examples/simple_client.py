@@ -26,7 +26,7 @@ def main():
 		# 1. Instantiate the Client, which handles connection and auth.
 		client = Client(
 			server_address=server_address,
-			cert_path='certs/certificate.pem',
+			#cert_path='certs/certificate.pem',
 			keycloak_url=kc_url,
 			keycloak_realm=kc_realm,
 			keycloak_client_id=kc_client_id,

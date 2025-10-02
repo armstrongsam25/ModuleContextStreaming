@@ -3,9 +3,8 @@
 Provides a reusable Client class for connecting to the ModuleContextStreaming service.
 Enhanced with MCP-aware content parsing and handling.
 """
-import sys
 import json
-import base64
+import sys
 from typing import Dict, List, Any, Optional, Iterator
 
 import grpc
