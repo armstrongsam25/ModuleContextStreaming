@@ -108,7 +108,7 @@ ModuleContextStreaming/         # The project root directory
 
     ```bash
     # 1. Generate gRPC code from the .proto file
-    python -m grpc_tools.protoc -I ./protos --python_out=./ModuleContextStreaming --grpc_python_out=./ModuleContextStreaming ./protos/mcs.proto
+    python -m grpc_tools.protoc -I ./protos --python_out=./ModuleContextStreaming --grpc_python_out=./ModuleContextStreaming mcs.proto
 
     # 2. Patch the generated code for correct relative imports
     python build_scripts/build.py
