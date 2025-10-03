@@ -9,6 +9,7 @@ import sys
 import requests
 from dotenv import load_dotenv
 from ddgs import DDGS
+from bs4 import BeautifulSoup
 
 # This import remains the same, pointing to the refactored Server class
 from ModuleContextStreaming.server import Server
@@ -74,6 +75,37 @@ def tool_render_html(arguments):
         yield f"ERROR: Could not render HTML. {e}"
 
 
+def tool_web_fetcher(arguments):
+    """
+    Fetches the full text content of a webpage from a given URL.
+    This is useful for reading articles, biographies, or other text-heavy pages.
+    """
+    url = arguments.get('url')
+    if not url:
+        yield "ERROR: A 'url' argument is required."
+        return
+
+    try:
+        # Add a user-agent to look like a real browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+
+        # Use BeautifulSoup to parse the HTML and extract clean text
+        soup = BeautifulSoup(response.text, 'lxml')
+
+        # Get text and clean up whitespace
+        text = soup.get_text(separator='\n', strip=True)
+        yield text
+
+    except requests.RequestException as e:
+        yield f"ERROR: Could not fetch content from {url}. Reason: {e}"
+    except Exception as e:
+        yield f"ERROR: An unexpected error occurred while parsing the page: {e}"
+
+
 if __name__ == '__main__':
     load_dotenv()
     print("🚀 Starting example server...")
@@ -83,7 +115,8 @@ if __name__ == '__main__':
         "file_reader": tool_file_reader,
         "web_search": tool_web_search,
         "image_fetcher": tool_image_fetcher,
-        "render_html": tool_render_html
+        "render_html": tool_render_html,
+        "web_fetcher": tool_web_fetcher
     }
 
     # TODO: configure MCP server defs to work with MCS.
