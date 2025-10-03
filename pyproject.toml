@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ModuleContextStreaming"
-version = "0.0.6"
+version = "0.0.7"
 authors = [
   { name="Sam Armstrong", email="sam@personalailabs.com" },
 ]
@@ -31,6 +31,7 @@ dependencies = [
     "python-jose[cryptography]~=3.5.0",
     "requests~=2.32.5",
     "mcp~=1.15.0",
+    "openai~=2.1.0"
 ]
 
 [project.optional-dependencies]
@@ -42,6 +43,7 @@ dev = [
     "python-dotenv~=1.1.1",
     "cryptography~=46.0.1",
     "mcp~=1.15.0",
+    "openai~=2.1.0"
 ]
 
 [project.urls]
