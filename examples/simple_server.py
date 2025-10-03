@@ -60,6 +60,19 @@ def tool_image_fetcher(arguments):
     except requests.RequestException as e:
         yield f"ERROR: Could not fetch image from {url}. {e}"
 
+def tool_render_html(arguments):
+    """Renders HTML using a remote server."""
+    html = arguments.get('html_string')
+    if not html:
+        yield "ERROR: A 'html' argument is required."
+        return
+    try:
+        yield "Rendering HTML..."
+        yield html
+        yield "Rendering complete."
+    except requests.RequestException as e:
+        yield f"ERROR: Could not render HTML. {e}"
+
 
 if __name__ == '__main__':
     load_dotenv()
@@ -70,21 +83,11 @@ if __name__ == '__main__':
         "file_reader": tool_file_reader,
         "web_search": tool_web_search,
         "image_fetcher": tool_image_fetcher,
+        "render_html": tool_render_html
     }
 
-    # --- MCP Backend Configuration ---
-    # Get the absolute path to the MCP server script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    mcp_server_path = os.path.join(script_dir, "mcp_simple_server.py")
-
-    MCP_BACKENDS_CONFIG = [
-        # {
-        #     "name": "web_fetcher",
-        #     "command": sys.executable,  # Use the same python interpreter
-        #     "args": [mcp_server_path],  # Run the script directly
-        #     "env": os.environ
-        # }
-    ]
+    # TODO: configure MCP server defs to work with MCS.
+    MCP_BACKENDS_CONFIG = None
 
     try:
         server_port = int(os.environ['MCS_PORT'])

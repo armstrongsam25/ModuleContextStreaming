@@ -74,10 +74,8 @@ def main():
 	except Exception as e:
 		print(f"❌ An application error occurred: {e}", file=sys.stderr)
 	finally:
-		# 3. Ensure the connection is closed.
 		if client:
 			client.close()
-
 
 if __name__ == '__main__':
 	main()
